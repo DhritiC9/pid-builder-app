@@ -137,6 +137,7 @@ def get_unique_node_name(base_name, existing_nodes):
             return new_name
         i += 1
 
+# <<< REVERTED: This function now uses the graphviz library directly >>>
 def render_graph(constructed_graph, active_node=None):
     dot = graphviz.Digraph('P&ID', comment='Process Flow Diagram')
     dot.attr('node', shape='box', style='rounded,filled', fillcolor='lightblue')
@@ -156,7 +157,6 @@ def render_graph(constructed_graph, active_node=None):
             dot.edge(parent, child)
     return dot
 
-# <<< NEW FUNCTION: To automatically find a probable path >>>
 def find_most_probable_path(start_path, model, max_len=5):
     path = list(start_path)
     path_types_tracker = {get_node_type(n) for n in path}
@@ -231,6 +231,8 @@ else:
         st.subheader("Live P&ID Graph")
         active_node = st.session_state.active_path[-1] if st.session_state.active_path else None
         st.write("The green node is your current position. Use the controls to navigate or build.")
+        
+        # <<< REVERTED: Call the original render_graph function >>>
         graph_viz = render_graph(st.session_state.constructed_graph, active_node)
         st.graphviz_chart(graph_viz)
 
@@ -252,7 +254,6 @@ else:
                 st.rerun()
             st.write("---")
 
-        # <<< NEW: Automatic Path Suggestion UI >>>
         st.write("**Let the AI suggest the next steps:**")
         if st.button("Suggest Most Probable Path"):
             suggested = find_most_probable_path(st.session_state.active_path, transition_model)
@@ -311,11 +312,9 @@ else:
         else:
              st.success("Path complete! No further probable transitions found for manual adding.")
 
-
         st.write("---")
         c1, c2 = st.columns(2)
         with c1:
-            # <<< MODIFIED: Simplified "Go Back" logic >>>
             if st.button("Go Back One Step", use_container_width=True):
                 if len(st.session_state.active_path) > 1:
                     st.session_state.active_path.pop()
@@ -325,6 +324,5 @@ else:
                     st.warning("Cannot go back further.")
         with c2:
             if st.button("Finish & Restart", use_container_width=True):
-                for key in list(st.session_state.keys()): del st.session_state[key]
+                for key in list(st.session_state.keys()): del st.session_state.key
                 st.rerun()
-
