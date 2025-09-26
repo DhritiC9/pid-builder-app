@@ -21,8 +21,15 @@ NUM_PREDICTION_OPTIONS = 5
 
 @st.cache_data
 def get_node_type(node_id):
-    """Generalizes a node ID like 'hex1' or 'pp-123' back to its base type 'hex' or 'pp'."""
-    base = re.sub(r'\d+$', '', node_id)
+    """
+    Generalizes a node ID like 'hex1', 'pp-123', or 'c-2/m' back to 
+    its base type 'hex', 'pp', or 'c/m'.
+    """
+    # First, remove any hyphen followed by digits (e.g., 'c-2/m' -> 'c/m')
+    base = re.sub(r'-\d+', '', node_id)
+    # Then, remove any trailing digits (e.g., 'hex1' -> 'hex')
+    base = re.sub(r'\d+$', '', base)
+    # Final cleanup for any remaining trailing hyphens
     if base.endswith('-'):
         return base[:-1]
     return base
