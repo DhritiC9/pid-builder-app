@@ -1,8 +1,6 @@
 import streamlit as st
 import os
 import re
-import random
-import xml.etree.ElementTree as ET
 from collections import defaultdict, Counter
 import graphviz
 import pickle
@@ -15,13 +13,9 @@ st.set_page_config(
 )
 
 # --- GLOBAL VARIABLES & CONSTANTS ---
-DATASET_FOLDER = "/Users/dhritichandan/Downloads/SFILES_2/Dhriti_Test/new_dataset/graphml_10k_dataset"
-MODEL_FILENAME = "transition_model.pkl"
-
+MODEL_FILENAME = "app_data.pkl"
 MODEL_ORDER = 2
-NUM_TOP_PATHS_TO_FIND = 5
 NUM_PREDICTION_OPTIONS = 5
-MAX_NEIGHBORS_TO_SAMPLE = 75
 
 # --- CORE LOGIC (Cached for Performance) ---
 
@@ -33,98 +27,23 @@ def get_node_type(node_id):
         return base[:-1]
     return base
 
-def load_graphml(file_path):
-    try:
-        tree = ET.parse(file_path)
-        root = tree.getroot()
-    except ET.ParseError: return {}, []
-    ns = {"graphml": "http://graphml.graphdrawing.org/xmlns"}
-    nodes, edges = {}, []
-    for node in root.findall(".//graphml:node", ns):
-        nodes[node.attrib["id"]] = ""
-    for edge in root.findall(".//graphml:edge", ns):
-        edges.append((edge.attrib["source"], edge.attrib["target"]))
-    return nodes, edges
-
-@st.cache_resource(show_spinner="Building main graph from dataset...")
-def build_graph(dataset_folder):
-    if not os.path.isdir(dataset_folder):
-        st.error(f"Dataset folder not found at: {dataset_folder}")
+@st.cache_resource(show_spinner="Loading application data...")
+def load_app_data(filename=MODEL_FILENAME):
+    """Loads the pre-computed model and starting paths from the .pkl file."""
+    if not os.path.exists(filename):
+        st.error(f"Model file '{filename}' not found!")
+        st.info("This file should be in your GitHub repository. Please ensure the 'precompute.py' script was run and 'app_data.pkl' was uploaded correctly using Git LFS.")
         st.stop()
-        
-    outgoing_graph = defaultdict(list)
-    for filename in os.listdir(dataset_folder):
-        if filename.startswith("pid") and filename.endswith(".graphml"):
-            file_path = os.path.join(dataset_folder, filename)
-            _, edges = load_graphml(file_path)
-            for src, tgt in edges:
-                outgoing_graph[src].append(tgt)
-    return outgoing_graph
-
-@st.cache_resource(show_spinner="Building reversed graph...")
-def build_reversed_graph(_outgoing_graph):
-    incoming_graph = defaultdict(list)
-    for node, neighbors in _outgoing_graph.items():
-        for neighbor in neighbors:
-            incoming_graph[neighbor].append(node)
-    return incoming_graph
-
-@st.cache_resource(show_spinner="Loading or Creating Prediction Model...")
-def get_or_create_transition_model(_outgoing_graph, filename=MODEL_FILENAME):
-    if os.path.exists(filename):
-        st.info(f"Loading pre-computed model from '{filename}'...")
-        with open(filename, "rb") as f:
-            model_dict = pickle.load(f)
-        transitions = defaultdict(Counter)
-        for context, counts in model_dict.items():
-            transitions[context] = Counter(counts)
-        st.success("Model loaded successfully!")
-        return transitions
-
-    st.warning("First-time setup: Pre-computing prediction model. This might take several minutes...")
-    with st.spinner("Analyzing graph and building model... Please wait."):
-        transitions = defaultdict(Counter)
-        graph_items = list(_outgoing_graph.items())
-        for node_a, neighbors_of_a in graph_items:
-            if not neighbors_of_a: continue
-            sampled_neighbors_a = random.sample(neighbors_of_a, min(len(neighbors_of_a), MAX_NEIGHBORS_TO_SAMPLE))
-            for node_b in sampled_neighbors_a:
-                neighbors_of_b = _outgoing_graph.get(node_b, [])
-                if not neighbors_of_b: continue
-                sampled_neighbors_b = random.sample(neighbors_of_b, min(len(neighbors_of_b), MAX_NEIGHBORS_TO_SAMPLE))
-                context = (get_node_type(node_a), get_node_type(node_b))
-                for node_c in sampled_neighbors_b:
-                    next_node = get_node_type(node_c)
-                    transitions[context][next_node] += 1
     
-    st.info(f"Saving model to '{filename}' for fast startup next time...")
-    model_to_save = {k: dict(v) for k, v in transitions.items()}
-    with open(filename, "wb") as f:
-        pickle.dump(model_to_save, f)
-    st.success("Model built and saved! The app will now load instantly.")
-    return transitions
-
-@st.cache_data(show_spinner="Finding common paths to pumps...")
-def find_top_paths_to_pump(_graph, _reversed_graph, pump_keyword="pp", top_n=5, max_len=4):
-    in_degree_counts = Counter(neighbor for neighbors in _graph.values() for neighbor in neighbors)
-    pump_type = get_node_type(pump_keyword)
-    direct_predecessors = [node for node, neighbors in _graph.items() for neighbor in neighbors if pump_keyword in neighbor.lower()]
-    if not direct_predecessors: return []
-    top_predecessors = [node for node, _ in Counter(direct_predecessors).most_common(top_n)]
-    top_paths = []
-    for start_node in top_predecessors:
-        path = [start_node]
-        while len(path) < max_len - 1:
-            head_node = path[0]
-            predecessors = _reversed_graph.get(head_node, [])
-            if not predecessors: break
-            best_predecessor = max(predecessors, key=lambda p: in_degree_counts.get(p, 0))
-            if best_predecessor in path: break
-            path.insert(0, best_predecessor)
-        generalized_path = tuple(get_node_type(n) for n in path) + (pump_type,)
-        top_paths.append(generalized_path)
-    unique_paths = list(dict.fromkeys(top_paths))
-    return unique_paths
+    with open(filename, "rb") as f:
+        app_data = pickle.load(f)
+        
+    # Reconstruct the Counter objects for the model
+    transitions = defaultdict(Counter)
+    for context, counts in app_data["transition_model"].items():
+        transitions[context] = Counter(counts)
+        
+    return transitions, app_data["pump_sequences"]
 
 # --- VISUALIZATION & HELPER FUNCTIONS ---
 def get_unique_node_name(base_name, existing_nodes):
@@ -137,7 +56,6 @@ def get_unique_node_name(base_name, existing_nodes):
             return new_name
         i += 1
 
-# <<< REVERTED: This function now uses the graphviz library directly >>>
 def render_graph(constructed_graph, active_node=None):
     dot = graphviz.Digraph('P&ID', comment='Process Flow Diagram')
     dot.attr('node', shape='box', style='rounded,filled', fillcolor='lightblue')
@@ -185,10 +103,8 @@ def find_most_probable_path(start_path, model, max_len=5):
 st.title("⚗️ Interactive P&ID Path Builder")
 st.write("A tool to interactively build and traverse Process & Instrumentation Diagrams.")
 
-outgoing_graph = build_graph(DATASET_FOLDER)
-reversed_graph = build_reversed_graph(outgoing_graph)
-transition_model = get_or_create_transition_model(outgoing_graph)
-pump_sequences = find_top_paths_to_pump(outgoing_graph, reversed_graph, top_n=NUM_TOP_PATHS_TO_FIND)
+# Load the pre-computed data. The app's functionality starts here.
+transition_model, pump_sequences = load_app_data()
 
 if 'building' not in st.session_state:
     st.session_state.building = False
@@ -199,7 +115,7 @@ if 'building' not in st.session_state:
 if not st.session_state.building:
     st.header("1. Choose a common path leading to a pump")
     if not pump_sequences:
-        st.warning("Could not find any common paths to a pump in the dataset.")
+        st.warning("Could not find any common paths to a pump in the pre-computed data.")
     else:
         path_options = {f"{' -> '.join(seq)}": seq for seq in pump_sequences}
         chosen_path_str = st.selectbox("Select a starting sequence:", options=path_options.keys())
@@ -231,8 +147,6 @@ else:
         st.subheader("Live P&ID Graph")
         active_node = st.session_state.active_path[-1] if st.session_state.active_path else None
         st.write("The green node is your current position. Use the controls to navigate or build.")
-        
-        # <<< REVERTED: Call the original render_graph function >>>
         graph_viz = render_graph(st.session_state.constructed_graph, active_node)
         st.graphviz_chart(graph_viz)
 
@@ -312,6 +226,7 @@ else:
         else:
              st.success("Path complete! No further probable transitions found for manual adding.")
 
+
         st.write("---")
         c1, c2 = st.columns(2)
         with c1:
@@ -324,5 +239,6 @@ else:
                     st.warning("Cannot go back further.")
         with c2:
             if st.button("Finish & Restart", use_container_width=True):
-                for key in list(st.session_state.keys()): del st.session_state.key
+                for key in list(st.session_state.keys()): del st.session_state[key]
                 st.rerun()
+
