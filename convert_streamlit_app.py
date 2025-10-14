@@ -231,7 +231,7 @@ with tab1:
     st.header("SFILES to Graph Converter")
     st.info("Paste your compact single-line SFILES content below. The parser understands component numbering `(hex){1}`, branches `[]`, cycles `<1` and `1`, and control signals `(C){FC}_1` and `<_1`.")
     # Corrected default string that matches the P&ID diagram
-    default_compact = "(raw)(C){FC}_1(v)<_1(hex){1}(C){TC}_2(sep)[(C){PC}_3][(C){LC}_4][(v)<_3(prod)](C){FC}_5<_4(v)<_5(sep)[(C){PC}_6][(C){LC}_7][(v)<_6(prod)](C){FC}_8<_7(v)<_8(prod)"
+    default_compact = "(raw)(hex){1}(C){TC}_1(hex){2}(mix)<2(r)<_2[(C){TC}_2][(C){LC}_3][{tout}(C){PC}_4(v)<_4(prod)]{bout}(v)<_3(splt)[(hex){2}(hex){3}(C){TC}_5(pp)[(C){M}](C){PI}(C){FC}_6(v)<_6(mix)<1(r)<_7[(C){TC}_7][(C){LC}_8][{bout}(v)<_8(prod)]{tout}(C){PC}_9(v)<_9(splt)[(C){FC}_10(v)1<_10](hex){4}(r)<_11[(C){TC}_11][(C){LC}_12][{tout}(C){PC}_13(v)<_13(prod)]{bout}(v)<_12(hex){4}(prod)](C){FC}_14(v)2<_14n|(raw)(hex){1}(v)<_1(prod)n|(raw)(hex){3}(v)<_5(prod)"
     text_content = st.text_area("Compact SFILES Content", default_compact, height=150)
     
     # FIX: Changed key to be unique
