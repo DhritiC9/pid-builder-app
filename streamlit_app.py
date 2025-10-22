@@ -14,7 +14,7 @@ st.set_page_config(
 
 # --- GLOBAL VARIABLES & CONSTANTS ---
 MODEL_FILENAME = "app_data.pkl"
-MODEL_ORDER = 3
+MODEL_ORDER = 2
 NUM_PREDICTION_OPTIONS = 5
 
 # --- CORE LOGIC (Cached for Performance) ---
