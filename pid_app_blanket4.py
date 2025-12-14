@@ -255,11 +255,9 @@ if st.session_state.get('data_loaded', False):
             if "Next" in direction:
                 if blanket_stats['children']:
                     options = blanket_stats['children']
-                    st.info(f"Based on **Outputs**: `{current_type}` usually feeds into these.")
             else:
                 if blanket_stats['parents']:
                     options = blanket_stats['parents']
-                    st.info(f"Based on **Inputs**: `{current_type}` usually receives flow from these.")
 
             source_node = st.session_state.focus_node
             
