@@ -103,7 +103,7 @@ def load_precomputed_models(filepath):
 
 # -------- Main Streamlit App Logic --------
 st.set_page_config(layout="wide", page_title="PID Smart Builder")
-st.title("🤖 Intelligent PID Graph Builder")
+st.title(" Intelligent PID Graph Builder")
 st.markdown("""
 This tool uses **Markov Blankets (Graph Logic)**.
 It predicts connections by analyzing the structural requirements of the active component (Inputs/Outputs/Parallelism).
@@ -132,7 +132,7 @@ if not st.session_state.data_loaded:
         st.session_state.start_paths = paths
         st.session_state.all_node_types = sorted(list(blanket.keys()))
         st.session_state.data_loaded = True
-        st.toast("Models loaded successfully!", icon="🚀")
+        st.toast("Models loaded successfully!")
         st.rerun()
     else:
         st.warning(f"Using Demo Data (File `{MODEL_FILE}` not found).")
@@ -220,7 +220,7 @@ if st.session_state.get('data_loaded', False):
             
             # Focus Node Selector
             st.write("---")
-            st.write("### 📍 Active Node")
+            st.write("###  Active Node")
             col_f1, col_f2 = st.columns([3,1])
             with col_f1:
                 if st.session_state.focus_node not in st.session_state.graph_nodes:
@@ -241,7 +241,7 @@ if st.session_state.get('data_loaded', False):
                     st.rerun()
 
         with col_tools:
-            st.subheader("🔮 Graph Suggestions")
+            st.subheader("Graph Suggestions")
             
             current_type = get_node_type(st.session_state.focus_node)
             blanket_stats = get_markov_blanket_stats(current_type, st.session_state.blanket_model)
@@ -307,7 +307,7 @@ if st.session_state.get('data_loaded', False):
                     st.rerun()
 
             st.divider()
-            st.markdown("### 🛡️ Structural Validation")
+            st.markdown("###  Structural Validation")
 
             # --- 1. OUTGOING (Missing Children) ---
             if blanket_stats['children']:
