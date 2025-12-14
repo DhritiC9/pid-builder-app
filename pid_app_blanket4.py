@@ -291,7 +291,7 @@ if st.session_state.get('data_loaded', False):
             
             # --- MANUAL FALLBACK ---
             st.divider()
-            with st.expander("🛠️ Manual Component Add", expanded=not options):
+            with st.expander(" Manual Component Add", expanded=not options):
                 manual_node = st.selectbox("Add any component:", st.session_state.all_node_types)
                 if st.button("Add Manually"):
                     new_id = get_unique_id(manual_node, st.session_state.graph_nodes)
@@ -334,7 +334,7 @@ if st.session_state.get('data_loaded', False):
                     missing_in = [p for p in standard_parents if p not in current_parent_types]
                     if missing_in:
                         msg = f"Missing Input: `{current_type}` also typically receives input from **{', '.join(missing_in)}**."
-                        st.info(f"ℹ️ {msg}")
+                        st.info(f"⚠️ {msg}")
 
     # === DONE ===
     elif st.session_state.stage == 'done':
